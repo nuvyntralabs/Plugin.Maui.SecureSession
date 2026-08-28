@@ -1,5 +1,10 @@
 # Changelog
 
+
+## 1.0.1
+
+- LLM-friendly README, llms.txt, AGENTS.md, and improved NuGet title/tags for coding-agent discoverability.
+
 ## 1.0.0
 
 - Session management for .NET MAUI on iOS and Android
