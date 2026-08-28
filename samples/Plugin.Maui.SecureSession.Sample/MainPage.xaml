@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Plugin.Maui.SecureSession.Sample.MainPage"
+             Title="SecureSession">
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="12">
+            <Label Text="Plugin.Maui.SecureSession" FontSize="22" FontAttributes="Bold" />
+            <Label x:Name="StatusLabel" FontSize="16" />
+            <Label x:Name="DetailLabel" LineBreakMode="WordWrap" />
+
+            <VerticalStackLayout x:Name="LoginPanel" Spacing="8">
+                <Entry x:Name="UserEntry" Placeholder="Username" Text="ada" />
+                <Entry x:Name="PasswordEntry" Placeholder="Password (maui)" IsPassword="True" Text="maui" />
+                <Button Text="Sign in" Clicked="OnLogin" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout x:Name="SessionPanel" Spacing="8" IsVisible="False">
+                <Button Text="Get access token" Clicked="OnGetToken" />
+                <Button Text="Call API (force 401 → refresh → retry)" Clicked="OnCallApi" />
+                <Button Text="Refresh tokens now" Clicked="OnRefresh" />
+                <Button Text="Lock session" Clicked="OnLock" />
+                <Button Text="Unlock with biometrics" Clicked="OnUnlock" />
+                <Button Text="Enable biometric unlock" Clicked="OnEnableBiometric" />
+                <Button Text="List devices" Clicked="OnListDevices" />
+                <Button Text="Add demo iPad session" Clicked="OnAddDevice" />
+                <Button Text="Logout this device" Clicked="OnLogout" />
+                <Button Text="Logout all devices" Clicked="OnLogoutAll" />
+            </VerticalStackLayout>
+
+            <Label x:Name="LogLabel" FontFamily="Courier" FontSize="12" LineBreakMode="WordWrap" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
