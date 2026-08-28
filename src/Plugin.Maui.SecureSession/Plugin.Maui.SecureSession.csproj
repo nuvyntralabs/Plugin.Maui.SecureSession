@@ -20,9 +20,9 @@
     <PackageId>Plugin.Maui.SecureSession</PackageId>
     <Title>.NET MAUI SecureSession — tokens, 401 retry, biometrics</Title>
     <Description>Mobile authentication and session management for .NET MAUI on iOS and Android. Access and refresh tokens, rotating refresh tokens, automatic 401 retry, logout, session expiry, multi-device sessions, biometric unlock, and secure persistence via SecureStoragePlus.</Description>
-    <PackageTags>dotnet-maui;maui;maui-plugin;maui-utilities;cross-platform;android;ios;nuget;nugetworld;auth;session;oauth;refresh-token;401;biometrics;faceid;fingerprint;multi-device</PackageTags>
+    <PackageTags>dotnet-maui;maui;maui-plugin;maui-utilities;cross-platform;android;ios;nuget;mauiessentials;auth;session;oauth;refresh-token;401;biometrics;faceid;fingerprint;multi-device</PackageTags>
     <Authors>Niladri</Authors>
-    <Company>NugetWorld</Company>
+    <Company>MauiEssentials</Company>
     <Copyright>Copyright © 2026 Niladri</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>

@@ -5,7 +5,7 @@ Mobile authentication and session management for .NET MAUI: access/refresh token
 Repository: https://github.com/NiladriPadhy/Plugin.Maui.SecureSession
 NuGet: https://www.nuget.org/packages/Plugin.Maui.SecureSession
 Paper: https://niladripadhy.vercel.app/opensource/plugin-maui-secure-session
-Catalog: https://github.com/NiladriPadhy/NugetWorld
+Catalog: https://github.com/NiladriPadhy/MauiEssentials
 License: MIT
 
 ## Supported versions

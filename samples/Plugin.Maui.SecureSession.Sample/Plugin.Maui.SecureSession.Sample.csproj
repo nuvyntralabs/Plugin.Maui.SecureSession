@@ -11,7 +11,7 @@
 		<Nullable>enable</Nullable>
 		<MauiXamlInflator>SourceGen</MauiXamlInflator>
 		<ApplicationTitle>SecureSession Sample</ApplicationTitle>
-		<ApplicationId>com.nugetworld.plugin.maui.securesession.sample</ApplicationId>
+		<ApplicationId>com.mauiessentials.plugin.maui.securesession.sample</ApplicationId>
 		<ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
 		<ApplicationVersion>1</ApplicationVersion>
 		<WindowsPackageType>None</WindowsPackageType>
