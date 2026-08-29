@@ -10,6 +10,7 @@ sealed class SecureSessionImplementation : ISecureSession
     readonly IDeviceIdentity _device;
     readonly SemaphoreSlim _mutex = new(1, 1);
     readonly SemaphoreSlim _refreshGate = new(1, 1);
+    readonly object _stateGate = new();
 
     SessionRecord? _record;
     SessionState _state = SessionState.Anonymous;
@@ -33,13 +34,41 @@ sealed class SecureSessionImplementation : ISecureSession
         _device = device ?? throw new ArgumentNullException(nameof(device));
     }
 
-    public SessionState State => _state;
+    public SessionState State
+    {
+        get
+        {
+            lock (_stateGate)
+                return _state;
+        }
+    }
 
-    public bool IsAuthenticated => _state == SessionState.Authenticated;
+    public bool IsAuthenticated
+    {
+        get
+        {
+            lock (_stateGate)
+                return _state == SessionState.Authenticated;
+        }
+    }
 
-    public bool IsLocked => _state == SessionState.Locked;
+    public bool IsLocked
+    {
+        get
+        {
+            lock (_stateGate)
+                return _state == SessionState.Locked;
+        }
+    }
 
-    public SessionSnapshot? Current => _record is null ? null : ToSnapshot(_record);
+    public SessionSnapshot? Current
+    {
+        get
+        {
+            lock (_stateGate)
+                return _record is null ? null : ToSnapshot(_record);
+        }
+    }
 
     public event EventHandler<SessionChangedEventArgs>? SessionChanged;
 
@@ -77,7 +106,9 @@ sealed class SecureSessionImplementation : ISecureSession
         await EnsureRestoredAsync(cancellationToken).ConfigureAwait(false);
         ThrowIfLocked();
 
-        var record = _record;
+        SessionRecord? record;
+        lock (_stateGate)
+            record = _record;
         if (record is null)
         {
             throw new SessionExpiredException(SessionExpiryReason.TokenExpired, "No session is signed in.");
@@ -194,35 +225,49 @@ sealed class SecureSessionImplementation : ISecureSession
     public async Task LockAsync(CancellationToken cancellationToken = default)
     {
         await EnsureRestoredAsync(cancellationToken).ConfigureAwait(false);
-        if (_record is null || !_unlocked)
+        bool shouldLock;
+        lock (_stateGate)
+        {
+            shouldLock = _record is not null && _unlocked;
+            if (shouldLock)
+            {
+                _unlocked = false;
+            }
+        }
+
+        if (!shouldLock)
         {
             return;
         }
 
-        _unlocked = false;
         SetState(SessionState.Locked);
         Locked?.Invoke(this, EventArgs.Empty);
         _options.Events.OnLocked?.Invoke();
-        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     public async Task UnlockAsync(CancellationToken cancellationToken = default)
     {
         await EnsureRestoredAsync(cancellationToken).ConfigureAwait(false);
-        if (_record is null)
+
+        SessionRecord? record;
+        lock (_stateGate)
+        {
+            record = _record;
+            if (record is not null && _unlocked && _state == SessionState.Authenticated)
+            {
+                return;
+            }
+        }
+
+        if (record is null)
         {
             throw new SessionExpiredException(SessionExpiryReason.TokenExpired, "No session is signed in.");
         }
 
-        if (IsLifetimeExpired(_record))
+        if (IsLifetimeExpired(record))
         {
-            await ExpireAsync(LifetimeReason(_record), cancellationToken).ConfigureAwait(false);
-            throw new SessionExpiredException(LifetimeReason(_record));
-        }
-
-        if (_unlocked && _state == SessionState.Authenticated)
-        {
-            return;
+            await ExpireAsync(LifetimeReason(record), cancellationToken).ConfigureAwait(false);
+            throw new SessionExpiredException(LifetimeReason(record));
         }
 
         var ok = await _biometrics.AuthenticateAsync(_options.BiometricPromptReason, cancellationToken).ConfigureAwait(false);
@@ -231,8 +276,22 @@ sealed class SecureSessionImplementation : ISecureSession
             throw new BiometricAuthenticationException("Biometric unlock was cancelled or failed.");
         }
 
-        _unlocked = true;
-        TouchMemory(_record);
+        SessionRecord? current;
+        lock (_stateGate)
+        {
+            current = _record;
+            if (current is not null)
+            {
+                _unlocked = true;
+            }
+        }
+
+        if (current is null)
+        {
+            throw new SessionExpiredException(SessionExpiryReason.TokenExpired, "No session is signed in.");
+        }
+
+        TouchMemory(current);
         SetState(SessionState.Authenticated);
         Unlocked?.Invoke(this, EventArgs.Empty);
         _options.Events.OnUnlocked?.Invoke();
@@ -270,6 +329,7 @@ sealed class SecureSessionImplementation : ISecureSession
     public async Task DisableBiometricUnlockAsync(CancellationToken cancellationToken = default)
     {
         await EnsureRestoredAsync(cancellationToken).ConfigureAwait(false);
+        ThrowIfLocked();
         if (_record is null)
         {
             return;
@@ -277,15 +337,7 @@ sealed class SecureSessionImplementation : ISecureSession
 
         _record.BiometricEnabled = false;
         await PersistAsync(cancellationToken).ConfigureAwait(false);
-        if (_state == SessionState.Locked)
-        {
-            _unlocked = true;
-            SetState(SessionState.Authenticated);
-        }
-        else
-        {
-            SetState(_state);
-        }
+        SetState(_state);
     }
 
     public async Task<IReadOnlyList<RemoteSession>> GetSessionsAsync(CancellationToken cancellationToken = default)
@@ -351,14 +403,20 @@ sealed class SecureSessionImplementation : ISecureSession
 
     public void NotifyBackground()
     {
-        if (_record is not null)
+        // Do not TouchMemory here — resetting LastActivityAt on background
+        // would extend idle timeout every time the app leaves the foreground.
+        bool shouldLock;
+        lock (_stateGate)
         {
-            TouchMemory(_record);
+            shouldLock = _options.LockOnBackground && _record is not null && _unlocked && ShouldLock();
+            if (shouldLock)
+            {
+                _unlocked = false;
+            }
         }
 
-        if (_options.LockOnBackground && _record is not null && _unlocked && ShouldLock())
+        if (shouldLock)
         {
-            _unlocked = false;
             SetState(SessionState.Locked);
             Locked?.Invoke(this, EventArgs.Empty);
             _options.Events.OnLocked?.Invoke();
@@ -380,8 +438,14 @@ sealed class SecureSessionImplementation : ISecureSession
 
     Task EnsureRestoredAsync(CancellationToken cancellationToken)
     {
-        _restoreTask ??= RestoreCoreAsync();
-        return _restoreTask.WaitAsync(cancellationToken);
+        var existing = Volatile.Read(ref _restoreTask);
+        if (existing is null)
+        {
+            var created = RestoreCoreAsync();
+            existing = Interlocked.CompareExchange(ref _restoreTask, created, null) ?? created;
+        }
+
+        return existing.WaitAsync(cancellationToken);
     }
 
     async Task RestoreCoreAsync()
@@ -389,9 +453,12 @@ sealed class SecureSessionImplementation : ISecureSession
         var record = await _store.LoadAsync(CancellationToken.None).ConfigureAwait(false);
         if (record is null)
         {
-            _record = null;
-            _unlocked = false;
-            _state = SessionState.Anonymous;
+            lock (_stateGate)
+            {
+                _record = null;
+                _unlocked = false;
+                _state = SessionState.Anonymous;
+            }
             return;
         }
 
@@ -401,16 +468,19 @@ sealed class SecureSessionImplementation : ISecureSession
             return;
         }
 
-        _record = record;
-        if (record.BiometricEnabled || _options.RequireBiometricUnlock)
+        lock (_stateGate)
         {
-            _unlocked = false;
-            _state = SessionState.Locked;
-        }
-        else
-        {
-            _unlocked = true;
-            _state = SessionState.Authenticated;
+            _record = record;
+            if (record.BiometricEnabled || _options.RequireBiometricUnlock)
+            {
+                _unlocked = false;
+                _state = SessionState.Locked;
+            }
+            else
+            {
+                _unlocked = true;
+                _state = SessionState.Authenticated;
+            }
         }
     }
 
@@ -517,8 +587,11 @@ sealed class SecureSessionImplementation : ISecureSession
         await _mutex.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            _record = record;
-            _unlocked = true;
+            lock (_stateGate)
+            {
+                _record = record;
+                _unlocked = true;
+            }
             await _store.SaveAsync(record, cancellationToken).ConfigureAwait(false);
             SetState(SessionState.Authenticated);
         }
@@ -590,8 +663,11 @@ sealed class SecureSessionImplementation : ISecureSession
     async Task ClearLocalAsync(CancellationToken cancellationToken)
     {
         await _store.ClearAsync(cancellationToken).ConfigureAwait(false);
-        _record = null;
-        _unlocked = false;
+        lock (_stateGate)
+        {
+            _record = null;
+            _unlocked = false;
+        }
         _inFlightRefresh = null;
     }
 
@@ -622,12 +698,19 @@ sealed class SecureSessionImplementation : ISecureSession
             return false;
         }
 
-        if (record.AccessTokenExpiresAt is not { } expires)
+        if (record.AccessTokenExpiresAt is { } expires)
         {
-            return true;
+            return _clock.UtcNow + _options.AccessTokenRefreshSkew < expires;
         }
 
-        return _clock.UtcNow + _options.AccessTokenRefreshSkew < expires;
+        // Opaque tokens / JWTs without exp: assume a one-hour lifetime so they
+        // are refreshed via the configured skew instead of staying forever-fresh.
+        if (CanRefresh(record))
+        {
+            return _clock.UtcNow + _options.AccessTokenRefreshSkew < record.IssuedAt + TimeSpan.FromHours(1);
+        }
+
+        return true;
     }
 
     bool CanRefresh(SessionRecord record)
@@ -664,9 +747,12 @@ sealed class SecureSessionImplementation : ISecureSession
 
     void ThrowIfLocked()
     {
-        if (_state == SessionState.Locked || (_record is not null && !_unlocked && ShouldLock()))
+        lock (_stateGate)
         {
-            throw new SessionLockedException();
+            if (_state == SessionState.Locked || (_record is not null && !_unlocked && ShouldLock()))
+            {
+                throw new SessionLockedException();
+            }
         }
     }
 
@@ -677,14 +763,21 @@ sealed class SecureSessionImplementation : ISecureSession
 
     void SetState(SessionState next)
     {
-        var previous = _state;
-        _state = next;
+        SessionState previous;
+        SessionSnapshot? snapshot;
+        lock (_stateGate)
+        {
+            previous = _state;
+            _state = next;
+            snapshot = _record is null ? null : ToSnapshot(_record);
+        }
+
         if (previous == next && next is not SessionState.Authenticated)
         {
             return;
         }
 
-        SessionChanged?.Invoke(this, new SessionChangedEventArgs(previous, next, Current));
+        SessionChanged?.Invoke(this, new SessionChangedEventArgs(previous, next, snapshot));
     }
 
     SessionSnapshot ToSnapshot(SessionRecord record) =>

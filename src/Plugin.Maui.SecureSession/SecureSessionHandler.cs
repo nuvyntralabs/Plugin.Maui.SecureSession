@@ -78,7 +78,7 @@ public sealed class SecureSessionHandler : DelegatingHandler
         catch (SessionExpiredException)
         {
             request.Headers.Authorization = null;
-            return request.Headers.Authorization?.Parameter;
+            return null;
         }
         catch (SessionLockedException)
         {
