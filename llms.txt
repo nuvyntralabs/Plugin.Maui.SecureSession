@@ -2,10 +2,10 @@
 
 Mobile authentication and session management for .NET MAUI: access/refresh tokens, 401 retry, logout, biometrics, and multi-device sessions.
 
-Repository: https://github.com/NiladriPadhy/Plugin.Maui.SecureSession
+Repository: https://github.com/nuvyntralabs/Plugin.Maui.SecureSession
 NuGet: https://www.nuget.org/packages/Plugin.Maui.SecureSession
 Paper: https://niladripadhy.vercel.app/opensource/plugin-maui-secure-session
-Catalog: https://github.com/NiladriPadhy/MauiEssentials
+Catalog: https://github.com/nuvyntralabs/MauiEssentials
 License: MIT
 
 ## Supported versions
@@ -33,9 +33,9 @@ Registration: `UseSecureSession` — see README.md.
 
 ## Documentation
 
-https://github.com/NiladriPadhy/Plugin.Maui.SecureSession
-https://github.com/NiladriPadhy/Plugin.Maui.SecureSession#readme
+https://github.com/nuvyntralabs/Plugin.Maui.SecureSession
+https://github.com/nuvyntralabs/Plugin.Maui.SecureSession#readme
 
 ## Source
 
-https://github.com/NiladriPadhy/Plugin.Maui.SecureSession
+https://github.com/nuvyntralabs/Plugin.Maui.SecureSession
