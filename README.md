@@ -39,6 +39,7 @@ Retry
 | **Multi-device** | List and revoke other sessions |
 | **Biometric unlock** | Face ID / fingerprint gate after lock or process death |
 | **Secure persistence** | AES-256-GCM via `Plugin.Maui.SecureStoragePlus` |
+| **Token-bundle login** | Host-trusted restore via `LoginAsync(TokenBundle)`; disable with `AcceptUnvalidatedTokens = false` |
 
 ## Install
 
@@ -126,6 +127,8 @@ public sealed class ShopAuthGateway : IAuthGateway
 Already have tokens from a browser OAuth flow?
 
 ```csharp
+options.AcceptUnvalidatedTokens = true; // default — host-trusted restore
+
 await session.LoginAsync(new TokenBundle
 {
     AccessToken = access,
@@ -134,6 +137,8 @@ await session.LoginAsync(new TokenBundle
     UserId = userId
 });
 ```
+
+`LoginAsync(TokenBundle)` does not call `IAuthGateway`. It is allowed while `AcceptUnvalidatedTokens` is `true` (the default, so existing OAuth restore flows keep working). Set it to `false` so only the gateway can create a session.
 
 If the access token is a JWT and `AccessTokenExpiresAt` is omitted, the plugin reads the `exp` claim.
 
@@ -262,7 +267,7 @@ dotnet build samples/Plugin.Maui.SecureSession.Sample/Plugin.Maui.SecureSession.
 dotnet pack src/Plugin.Maui.SecureSession/Plugin.Maui.SecureSession.csproj -c Release -o artifacts
 ```
 
-The `.nupkg` is written to `artifacts/Plugin.Maui.SecureSession.1.0.0.nupkg`.
+The `.nupkg` is written to `artifacts/Plugin.Maui.SecureSession.1.0.6.nupkg`.
 
 ## License
 

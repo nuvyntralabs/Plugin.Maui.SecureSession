@@ -94,6 +94,12 @@ sealed class SecureSessionImplementation : ISecureSession
     public async Task<SessionSnapshot> LoginAsync(TokenBundle tokens, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(tokens);
+        if (!_options.AcceptUnvalidatedTokens)
+        {
+            throw new SecureSessionException(
+                "LoginAsync(TokenBundle) is disabled. Set AcceptUnvalidatedTokens to true after the host has validated the tokens, or sign in through IAuthGateway.");
+        }
+
         await EnsureRestoredAsync(cancellationToken).ConfigureAwait(false);
 
         var device = await CreateDeviceContextAsync(newSession: true, cancellationToken).ConfigureAwait(false);

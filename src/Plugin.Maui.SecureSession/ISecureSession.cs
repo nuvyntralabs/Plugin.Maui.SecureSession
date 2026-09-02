@@ -57,6 +57,8 @@ public interface ISecureSession
 
     /// <summary>
     /// Accepts tokens from an external login flow (browser OAuth, OTP, etc.) and persists them.
+    /// Requires <see cref="SecureSessionOptions.AcceptUnvalidatedTokens"/> (default <c>true</c>).
+    /// The plugin does not call the auth gateway or verify JWT signatures.
     /// </summary>
     Task<SessionSnapshot> LoginAsync(TokenBundle tokens, CancellationToken cancellationToken = default);
 

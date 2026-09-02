@@ -98,4 +98,12 @@ public sealed class SecureSessionOptions
     /// Gets or sets a revoke delegate used when no <see cref="IAuthGateway"/> is registered.
     /// </summary>
     public Func<string, string, CancellationToken, Task>? RevokeSessionAsync { get; set; }
+
+    /// <summary>
+    /// When <c>true</c>, <see cref="ISecureSession.LoginAsync(TokenBundle, CancellationToken)"/>
+    /// accepts caller-supplied tokens without calling <see cref="IAuthGateway"/>.
+    /// This is a host-trusted restore path (OAuth, OTP). Default is <c>true</c>.
+    /// Set <c>false</c> to reject bundle login unless the host validates tokens itself.
+    /// </summary>
+    public bool AcceptUnvalidatedTokens { get; set; } = true;
 }

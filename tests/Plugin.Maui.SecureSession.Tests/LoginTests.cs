@@ -68,4 +68,19 @@ public sealed class LoginTests
         Assert.Equal("ada", restored.Current?.UserId);
         Assert.StartsWith("access.ada.0.", await restored.GetAccessTokenAsync());
     }
+
+    [Fact]
+    public async Task Login_with_token_bundle_can_be_disabled()
+    {
+        var (session, _, _, _, clock, _) = Harness.Create(options => options.AcceptUnvalidatedTokens = false);
+
+        await Assert.ThrowsAsync<SecureSessionException>(() => session.LoginAsync(new TokenBundle
+        {
+            AccessToken = "bundle-access",
+            UserId = "blocked",
+            AccessTokenExpiresAt = clock.UtcNow.AddHours(1)
+        }));
+
+        Assert.False(session.IsAuthenticated);
+    }
 }
