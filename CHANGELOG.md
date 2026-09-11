@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.7
+
+- Document Android and iOS host permissions required for the plugin to work.
+
 ## 1.0.2
 
 - Rebrand package metadata and catalog references to MauiEssentials.

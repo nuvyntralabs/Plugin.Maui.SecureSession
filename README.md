@@ -222,14 +222,31 @@ var session = SecureSession.Create(new SecureSessionOptions
 await session.RestoreAsync();
 ```
 
-## Platform notes
+## Permissions
 
-**iOS** — Face ID needs a usage string in `Info.plist`:
+Required when biometric unlock is enabled (`RequireBiometricUnlock` or `EnableBiometricUnlockAsync`).
+
+### Android
+
+Add to `Platforms/Android/AndroidManifest.xml`:
+
+```xml
+<uses-permission android:name="android.permission.USE_BIOMETRIC" />
+<uses-permission android:name="android.permission.USE_FINGERPRINT" />
+```
+
+Minimum API 23. Enroll a fingerprint, face, or device PIN on the emulator before testing unlock.
+
+### iOS
+
+Add to `Platforms/iOS/Info.plist`:
 
 ```xml
 <key>NSFaceIDUsageDescription</key>
 <string>Unlock your session</string>
 ```
+
+Touch ID and the device passcode do not need a usage string. Face ID does.
 
 SecureStoragePlus needs a Keychain entitlement. In `Entitlements.plist`:
 
@@ -240,7 +257,7 @@ SecureStoragePlus needs a Keychain entitlement. In `Entitlements.plist`:
 </array>
 ```
 
-**Android** — BiometricPrompt needs `USE_BIOMETRIC` (declare it on the app) and a minimum of API 23. Enroll a fingerprint or face on the emulator before testing unlock.
+## Platform notes
 
 | | Android | iOS | `net10.0` |
 | --- | --- | --- | --- |
@@ -267,7 +284,7 @@ dotnet build samples/Plugin.Maui.SecureSession.Sample/Plugin.Maui.SecureSession.
 dotnet pack src/Plugin.Maui.SecureSession/Plugin.Maui.SecureSession.csproj -c Release -o artifacts
 ```
 
-The `.nupkg` is written to `artifacts/Plugin.Maui.SecureSession.1.0.6.nupkg`.
+The `.nupkg` is written to `artifacts/Plugin.Maui.SecureSession.1.0.7.nupkg`.
 
 ## License
 
